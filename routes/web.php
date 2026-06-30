@@ -1,19 +1,29 @@
 <?php
 
-use App\Http\Controllers\LoginController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\LoginController;
 
+// Portal Utama
 Route::get('/', function () {
-    return view('login');
+    return view('lab-index');
 });
 
-// Jalur yang akan kita hack
+// 1. Pintu Zona RENTAN (Merah)
+Route::get('/login-insecure', function () { return view('login-insecure'); });
 Route::post('/login-insecure', [LoginController::class, 'insecureLogin'])->name('login.insecure');
 
-// Jalur yang aman
+// 2. Pintu Zona AMAN (Hijau)
+Route::get('/login-secure', function () { return view('login-secure'); });
 Route::post('/login-secure', [LoginController::class, 'secureLogin'])->name('login.secure');
 
-use App\Http\Controllers\PostController;
+// Dashboard CTF
+Route::get('/dashboard', function () {
+    return view('dashboard');
+})->name('dashboard')->middleware('auth');
 
-Route::get('/guestbook', [PostController::class, 'index'])->name('guestbook.index');
-Route::post('/guestbook', [PostController::class, 'store'])->name('guestbook.store');
+Route::post('/logout', function () {
+    \Illuminate\Support\Facades\Auth::logout();
+    request()->session()->invalidate();
+    request()->session()->regenerateToken();
+    return redirect('/');
+})->name('logout');

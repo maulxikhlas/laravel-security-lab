@@ -8,40 +8,62 @@ use Illuminate\Support\Facades\Auth;
 
 class LoginController extends Controller
 {
-    /**
-     * Jalur Insecure (Rentan SQL Injection)
-     */
+    // WARNING: VULNERABLE TO SQL INJECTION
     public function insecureLogin(Request $request)
     {
         $email = $request->input('email');
         $password = $request->input('password');
 
-        // BAHAYA: Input user langsung digabung ke string query!
-        // Hacker bisa memanipulasi string ini.
         $user = DB::select("SELECT * FROM users WHERE email = '$email' AND password = '$password'");
 
         if (count($user) > 0) {
-            return "<h1>Login Berhasil (Insecure)!</h1> Selamat datang: " . $user[0]->email;
+            $userData = $user[0];
+            $laravelUser = \App\Models\User::where('email', $userData->email)->first();
+            if ($laravelUser) {
+                \Illuminate\Support\Facades\Auth::login($laravelUser);
+            }
+
+            // Deteksi jika login berhasil menggunakan manipulasi SQL Injection
+            if (str_contains($email, "'") || str_contains($email, "OR") || str_contains($email, "or") || str_contains($password, "'")) {
+                session(['sqli_detected' => true]);
+            } else {
+                session(['sqli_detected' => false]);
+            }
+            
+            return redirect()->route('dashboard');
         }
 
-        return back()->with('error', 'Login Gagal! Check query-nya lagi.');
+        return back()->with('error', 'ACCESS DENIED: Credentials Invalid (Insecure Path).');
     }
 
-    /**
-     * Jalur Secure (Best Practice Laravel)
-     */
-    // ... kode yang sudah ada ...
-
-    // INI JALUR AMAN (Tambahkan ini kalau belum ada)
+    // SECURE: Uses Parameter Binding
     public function secureLogin(Request $request)
     {
-        // Laravel otomatis membersihkan input di sini (SQLi tidak mempan)
-        $credentials = $request->only('email', 'password');
+        $request->validate([
+            'email' => 'required|email',
+            'password' => 'required',
+        ]);
 
-        if (Auth::attempt($credentials)) {
-            return "<h1>Login Berhasil (Secure)!</h1> Halo: " . Auth::user()->email;
+        $email = $request->input('email');
+        $password = $request->input('password');
+
+        // Mengambil data user berdasarkan email menggunakan Parameter Binding agar aman dari SQL Injection
+        $users = DB::select("SELECT * FROM users WHERE email = ?", [$email]);
+
+        if (count($users) > 0) {
+            $userData = $users[0];
+            // Verifikasi password yang di-hash menggunakan Hash::check
+            if (\Illuminate\Support\Facades\Hash::check($password, $userData->password)) {
+                // Memulai session user menggunakan ID
+                \Illuminate\Support\Facades\Auth::loginUsingId($userData->id);
+                
+                // Pastikan status deteksi dinonaktifkan untuk jalur aman
+                session(['sqli_detected' => false]);
+                
+                return redirect()->route('dashboard');
+            }
         }
 
-        return "<h1>Login Gagal!</h1> SQL Injection gagal di jalur ini.";
+        return back()->with('error', 'ACCESS DENIED: Credentials Invalid.');
     }
 }
