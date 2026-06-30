@@ -28,7 +28,7 @@ $user = DB::select("SELECT * FROM users WHERE email = '" . $email . "' AND passw
   Input dari user (`$email` dan `$password`) langsung ditempelkan ke dalam string kueri SQL. Hal ini memungkinkan database engine menginterpretasikan input user sebagai bagian dari perintah eksekusi SQL, bukan data biasa.
 * **Skenario Serangan (Bypass Autentikasi):**
   Jika penyerang memasukkan input berikut pada kolom email:
-  `admin@siswa.com' OR '1'='1`
+  `budi@siswa.com' OR '1'='1`
   Maka kueri SQL yang dieksekusi di database berubah menjadi:
   ```sql
   SELECT * FROM users WHERE email = 'admin@siswa.com' OR '1'='1' AND password = '...'
@@ -59,7 +59,7 @@ $user = DB::select("SELECT * FROM users WHERE email = ? AND password = ?", [$ema
 
 1. **Uji Coba SQL Injection (Insecure):**
    * Masuk ke halaman login insecure.
-   * Masukkan email: `' OR '1'='1` atau `admin@siswa.com' OR '1'='1`
+   * Masukkan email: `' OR '1'='1` atau `budi@siswa.com' OR '1'='1`
    * Masukkan password acak / kosong.
    * Tekan tombol login. Anda akan berhasil login dan masuk ke Dashboard.
 
